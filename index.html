@@ -160,6 +160,17 @@ ul.ticks li{border-bottom:1px solid var(--line)}ul.ticks li::before{border-color
 @media (prefers-reduced-motion:no-preference){#sky .jib{transform-box:fill-box;transform-origin:50% 100%;animation:swj 9s ease-in-out infinite alternate}}
 @keyframes swj{from{transform:rotate(-2.5deg)}to{transform:rotate(2.5deg)}}
 @media(prefers-reduced-motion:reduce),(hover:none){#glow{display:none}}
+
+.folder-inside{display:none}
+#pmodal{position:fixed;inset:0;z-index:30;display:none;justify-content:center;padding:64px 16px;background:rgba(5,8,16,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto}
+#pmodal.on{display:flex}
+#pmodal .sheet{background:var(--bg2);border:1px solid var(--line);border-radius:20px;max-width:760px;width:100%;height:max-content;position:relative;box-shadow:0 40px 90px rgba(0,0,0,.55)}
+#pmodal .sheet .folder-inner{border:0;border-radius:20px;margin:0}
+#pmodal .close{position:sticky;top:14px;margin:14px 14px 0 auto;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--bg2);font-size:20px;line-height:1;cursor:pointer;color:var(--ink);z-index:2}
+#pmodal .close:hover{background:var(--clash);border-color:var(--clash);color:#fff}
+body.modal-lock{overflow:hidden}
+@media (prefers-reduced-motion:no-preference){#pmodal .sheet{animation:pop .28s cubic-bezier(.2,.8,.2,1)}}
+@keyframes pop{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -290,11 +301,31 @@ b.addEventListener('click',function(){var d=r.getAttribute('data-theme')||(match
 })();
 
 (function(){
+  var modal=document.createElement('div'); modal.id='pmodal';
+  var sheet=document.createElement('div'); sheet.className='sheet';
+  var closeBtn=document.createElement('button'); closeBtn.className='close'; closeBtn.setAttribute('aria-label','Close'); closeBtn.setAttribute('type','button'); closeBtn.textContent='\u2715';
+  sheet.appendChild(closeBtn); modal.appendChild(sheet); document.body.appendChild(modal);
+  var activeFolder=null, activeInside=null, activeBtn=null;
+  function closeModal(){
+    if(activeInside && sheet.querySelector('.folder-inner')) activeInside.appendChild(sheet.querySelector('.folder-inner'));
+    modal.classList.remove('on'); document.body.classList.remove('modal-lock');
+    if(activeBtn) activeBtn.setAttribute('aria-expanded','false');
+    if(activeFolder) activeFolder.setAttribute('data-open','0');
+    activeFolder=null; activeInside=null; activeBtn=null;
+  }
+  closeBtn.addEventListener('click',closeModal);
+  modal.addEventListener('click',function(e){ if(e.target===modal) closeModal(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && modal.classList.contains('on')) closeModal(); });
+
   document.querySelectorAll('.folder-face').forEach(function(btn){
     btn.addEventListener('click',function(){
-      var folder=btn.closest('.folder'), open=folder.getAttribute('data-open')==='1';
-      folder.setAttribute('data-open',open?'0':'1'); btn.setAttribute('aria-expanded',String(!open));
-      if(!open){ setTimeout(function(){folder.scrollIntoView({behavior:'smooth',block:'nearest'})},200); }
+      var folder=btn.closest('.folder'), inside=folder.querySelector('.folder-inside'), inner=folder.querySelector('.folder-inner');
+      if(!inner) return;
+      activeFolder=folder; activeInside=inside; activeBtn=btn;
+      sheet.appendChild(inner);
+      modal.classList.add('on'); document.body.classList.add('modal-lock');
+      btn.setAttribute('aria-expanded','true'); folder.setAttribute('data-open','1');
+      modal.scrollTop=0;
     });
     if(matchMedia('(hover:hover)').matches){
       btn.addEventListener('mousemove',function(e){
